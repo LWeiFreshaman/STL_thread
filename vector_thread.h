@@ -25,6 +25,10 @@ template <typename T>
 class vector_thread
 {
 public:
+    using iterator = typename vector<T>::iterator;
+    using size_type = typename vector<T>::size_type;
+    using reference = typename vector<T>::reference;
+    
     //默认初始化
     vector_thread()
         : m_vector() {}
@@ -104,11 +108,20 @@ public:
         m_vector.~vector();
     }
 
-    typename vector<T>::iterator begin() { return m_vector.begin(); }
-    typename vector<T>::iterator end() { return m_vector.end(); }
-    typename vector<T>::size_type size() { return m_vector.size(); }
-    typename vector<T>::reference front() { return m_vector.front(); }
-    typename vector<T>::reference back() { return m_vector.back(); }
+    void push_back(const T& value);
+    void push_back(T&& value);
+    void emplace_back(T&& value);
+    iterator insert(iterator pos, const T& value);
+    iterator emplace(iterator pos, T&& value);
+    void pop_back();
+    iterator erase(iterator start, iterator end);
+    iterator erase(iterator pos);
+
+    iterator begin() { return m_vector.begin(); }
+    iterator end() { return m_vector.end(); }
+    size_type size() { return m_vector.size(); }
+    reference front() { return m_vector.front(); }
+    reference back() { return m_vector.back(); }
 
 private:
     void changeSize(size_t size) 
@@ -120,3 +133,60 @@ private:
     vector<T> m_vector;
     ReadWriteLock lock;
 };
+
+
+template <typename T>
+void vector_thread<T>::push_back(const T& value)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    m_vector.push_back(value);
+}
+
+template <typename T>
+void vector_thread<T>::push_back(T&& value)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    m_vector.push_back(std::forward(value));
+}
+
+template <typename T>
+void vector_thread<T>::emplace_back(T&& value)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    m_vector.emplace_back(std::forward(value));
+}
+
+template <typename T>
+typename vector_thread<T>::iterator vector_thread<T>::insert(typename vector_thread<T>::iterator pos, const T& value)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    return m_vector.insert(pos, value);
+}
+
+template <typename T>
+typename vector_thread<T>::iterator vector_thread<T>::emplace(typename vector_thread<T>::iterator pos, T&& value)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    return m_vector.emplace(pos, value);
+}
+
+template <typename T>
+void vector_thread<T>::pop_back()
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    m_vector.pop_back();
+}
+
+template <typename T>
+typename vector_thread<T>::iterator vector_thread<T>::erase(typename vector_thread<T>::iterator start, typename vector_thread<T>::iterator end)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    m_vector.erase(start, end);
+}
+
+template <typename T>
+typename vector_thread<T>::iterator vector_thread<T>::erase(typename vector_thread<T>::iterator pos)
+{
+    ReadWriteLockGuard rwlg(lock, lockType::write);
+    m_vector.erase(pos);
+}
