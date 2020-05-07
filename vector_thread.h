@@ -28,6 +28,8 @@ public:
     using iterator = typename vector<T>::iterator;
     using size_type = typename vector<T>::size_type;
     using reference = typename vector<T>::reference;
+    using const_reference = typename vector<T>::const_reference;
+    using reverse_iterator = typename vector<T>::reverse_iterator;
     
     //默认初始化
     vector_thread()
@@ -60,9 +62,11 @@ public:
     //移动初始化
     vector_thread(vector_thread&& rhs)
     {
-        ReadWriteLockGuard rwlg(rhs.lock, lockType::write);
+        size_type rhs_size = rhs.size();        //防止死锁
+        
+        //ReadWriteLockGuard rwlg(rhs.lock, lockType::write);
         changeSize(rhs.size());
-
+        //changeSize(rhs_size);
         move(rhs.begin(), rhs.end(), back_inserter(m_vector));
     }
 
@@ -81,10 +85,13 @@ public:
     //移动赋值
     vector_thread& operator=(vector_thread&& rhs)
     {
-        ReadWriteLockGuard rwlg(rhs.lock, lockType::write);
-        ReadWriteLockGuard rwlgself(lock, lockType::write);
+        //size_type rhs_size = rhs.size();        //防止死锁
+        
+        //ReadWriteLockGuard rwlg(rhs.lock, lockType::write);
+        //ReadWriteLockGuard rwlgself(lock, lockType::write);
 
         m_vector.resize(rhs.size());
+        //m_vector.resize(rhs_size);
         move(rhs.begin(), rhs.end(), begin());
 
         return *this;
@@ -117,11 +124,84 @@ public:
     iterator erase(iterator start, iterator end);
     iterator erase(iterator pos);
 
-    iterator begin() { return m_vector.begin(); }
-    iterator end() { return m_vector.end(); }
-    size_type size() { return m_vector.size(); }
-    reference front() { return m_vector.front(); }
-    reference back() { return m_vector.back(); }
+    iterator begin() 
+    { 
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.begin(); 
+    }
+    iterator end() 
+    { 
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.end(); 
+    }
+
+    reverse_iterator rbegin() 
+    { 
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.rbegin();
+    }
+
+    reverse_iterator rend()
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.rend();
+    }
+    
+    size_type size()
+    { 
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.size(); 
+    }
+    size_type capacity()
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.capacity();
+    }
+
+    reference front() 
+    { 
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.front(); 
+    }
+    reference back() 
+    { 
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.back(); 
+    }
+    bool empty()
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector.empty();
+    }
+    void clear()
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::write);
+        m_vector.clear();
+    }
+
+    reference operator[](size_type pos) 
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read); 
+        return m_vector[pos]; 
+    }
+
+    const_reference operator[](size_type pos) const
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read);
+        return m_vector[pos];
+    }
+
+    reference at(size_type pos) 
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read); 
+        return m_vector.at(pos); 
+    }
+
+    const_reference at(size_type pos) const 
+    {
+        ReadWriteLockGuard rwlg(lock, lockType::read); 
+        return m_vector.at(pos); 
+    }
 
 private:
     void changeSize(size_t size) 
